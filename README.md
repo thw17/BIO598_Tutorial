@@ -147,6 +147,20 @@ Reference-based assembly requires a number of tools for steps including (but not
 ### Assembly: Step-by-step
 For today's tutorial, the reference genome is in the ``` reference ``` directory of this repository, the sequencing reads are in two files for each sample in the ``` fastq ``` directory of this repository, and the "Setting Up Anaconda" section above should take care of the software requirements.  Because we're working with a small dataset today, we won't need too much in the way of memory/storage, but bigger projects will often require at minimum a high-memory computer, but more likely high-performance computing clusters, dedicated servers, or online services such as Amazon Web Services.
 
+So now we'll walk through the major steps of reference-based genome assembly and build a pipeline along the way.
+
+#### Fastq Quality Control
+The first thing you should do when you get fastq files is get a sense of their quality.  The quickest way to do this is to run ```fastqc``` and take a look at the reports.  We can run fastqc on every fastq file in references with the command:
+  ```
+  fastqc *.fastq.gz
+  ```
+This should take less than a minute to complete and output a .zip and .html file for each fastq.  You can open the .html locally on your computer in your browser.
+
+If your sequences are of an unexpectedly low quality it might be worth contacting your sequencing center.  Otherwise, lower quality towards the ends of the reads, some PCR duplication, and sequence content that's slightly off are all pretty typical in sequencing experiments.  If you're interested in trimming low-quality ends of reads or removing sequencing adapters, take a look at programs like [Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic) or [Trim Galore!](http://www.bioinformatics.babraham.ac.uk/projects/trim_galore/).  Many read mappers like BWA handle adapters and low quality ends very well and downstream variant callers will build base quality into their genotype likelihoods, so it's often not necessary to do any preprocessing if your goal is variant calling.  For today's purposes, we'll take this approach and move onto our next step.
+
+#### Read mapping
+
+
 
 
 
