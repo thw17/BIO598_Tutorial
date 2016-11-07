@@ -192,8 +192,35 @@ If we take a look at the top of the file using ```head -n 8 ind1.sam```, we see 
   H7AGFADXX131213:2:1212:12308:62676      147     MT      3978    60      250M    =       3728    -500    CATAGCCGAATACACAAACATTATTATAATAAACCCCCTCACCACTACAATCTTCCTAGGAACAACATATGACGCCCTCTCCCCTGAACTCTACACAACATATTTTGTCACCAAGACCCTACTTCTAACCTCCCTGTTCTTATGAATTCGAACAGCATACCCCCGATTCCGCTACGACCAACTCATACACCTCCTATGAAAAAACTTCCTACCACTCACCCTAGCATTACTTATATGATATGTCTCCATA      @>=B?>95@>?@>@?@?@>??>;??>+@@@7@?8&?@@@?>?@@><=@A@B?@@><?A?>@@<:;7=826?=6//(;1;>>=>;>=?==>@>?@@?A@@>@@@???<:?=>?@@=0==>>>?@?>>@>@>A@@?@=@@?@@?=@A@AA6?A@@A?@?>;??@?5??A??9?><:9?@=>>>?@>@?>>??>>=?>>>??????>>??=>>>><7>>>8>>>>@=>?>=>>?>>>>>>>>>?<@>@><;<<      NM:i:2  MD:Z:34A40A174  AS:i:240        XS:i:0
   H7AGFADXX131213:2:1114:9857:73128       73      MT      15987   60      250M    =       15987   0       CACCCAAAGCTAAGATTCTAATTTAAACTATTCTCTGTCCTTTCATGGGGAAGCAGATTTGGGTACCACCCAAGTATTGACTCACCCATCAACAACCGCTATTCATCCAGTACATTACTGCCAGCCACCATGAATATTTTACGGTACCATAAATACTTGACCACCTGTAGTACATCAAAACCCACTCCACATCAAAACCCCCTCCCCATGCTTACTACCTAGTACATCAATCACTCCACAACTATCACAC      ;?;>?0??>?@<@>+>7<?>1/?@=??<A7>?>?>?:8/-B<2?1=-*((:+9??=A>@8=;&5;<A0:>?@9-3;7<=A>A@@*?>@?8@@>@A###########################################################################################################################################################      NM:i:16 MD:Z:38T63G0T2T0T0C29G36A8A30A1G1A6G6A0C2T12    AS:i:170        XS:i:0
   H7AGFADXX131213:2:1114:9857:73128       133     MT      15987   0       *       =       15987   0       ATGGCCCAAAAGAGAGGAGTGCAGGAAGATTTTGCGGGATAATGAATACCCGAAGAAGGGTGGACAAGGGATCCCTATCTCCGGTGGAACATACATAGGGCCGAGAAAGGACTTAACTGTAATGAGCTATGCATAATAGATAACTGTACAGTTCATCAAATTGTGAGGATGAGTATGATTATTTGTGTCCTCGAGGGAGAGGCGAGGACATGGATAAGCCGCTGAGTTGGGGACGTTGAAGGTTAATTGC      ##########################################################################################################################################################################################################################################################      AS:i:0  XS:i:0
+  ```
+As you can see, our first line (@SQ) contains information about the reference genome (there would be more lines if there were more sequences in our reference), our second line (@PG) contains information about our bwa commands, and the remaining lines contain information about each mapped read.  You can find more information about what information is contained in each record in the [SAM/BAM specificaions](https://samtools.github.io/hts-specs/SAMv1.pdf).
 
+While it's exciting that we've successfully mapped our first sample, there are two potential problems with our command above.  First, while SAM format is convenient in that it's human-readable, alignment files are ENORMOUS, so we'll want to compress to minimize our data footprint.  Further, we want to ensure that all read-pairing, etc. didn't get lost in the mapping process.  We can easily add these steps to our pipeline by piping our output to ```samtools``` which handles this easily.  So our complete command now looks like this:
+  ```
+  bwa mem -M reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samtools fixmate -O bam - bam/ind1.bam
+  ```
+#### Processing our bam file: adding read groups, removing duplicates, and sorting.
+The bam file we just created contains all of our alignments, but it's currently unordered, unlabeled, and unfiltered.
 
+##### Adding read groups
+Read groups are very useful when you're working with multiple samples, sequencing lanes, flowcells, etc.  Importantly for us, it'll help our downstream variant caller label samples correctly and handle potential sequencing batch effects.  [Picard](https://broadinstitute.github.io/picard/command-line-overview.html) is very commonly used to add read groups to bam files, but ```bwa``` also has the ability to add read groups on the fly while mapping.  This latter option will save us time and space, so we'll add read groups to individual 1 with ```bwa``` by adding to our previous command:
+  ```
+  bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samtools fixmate -O bam - bam/ind1.bam
+  ```
+In a perfect world, we'd know more about our sample and could use these tags more appropriately.  ID is the name of a read group (containing a unique combination of the following tags).  SM is the sample name.  LB is the sequencing library. PU is the flowcell barcode.  PL is the sequencing technology.  A number of other options exist (see the [@RG section of the SAM/BAM specifications](https://samtools.github.io/hts-specs/SAMv1.pdf) for more information).
+
+*Note that the fastq files actually contain reads from multiple lanes, etc., as I grabbed them from high-coverage 1000 genomes bam files.  But for simplicity's sake in this tutorial, we'll ignore that.
+
+##### Removing Duplicates
+During library preparation for sequencing, amplification steps can lead to PCR duplicates of reads.  The inclusion of duplicate reads can negatively affect our downstream analyses, so we need to remove them (this is the case with DNA sequencing - there's debate whether or not to do this in RNA-seq).  Most available tools, such as [Picard](https://broadinstitute.github.io/picard/command-line-overview.html), take a sorted bam file as input and output a sorted bam with duplicates either flagged or removed.  [Samblaster](https://github.com/GregoryFaust/samblaster), on the other hand, can take streaming output from bwa, which speeds up duplicate removal and allows us to produce one less bam file (saving us space).  We'll opt for Samblaster here, and incorporate it into our bwa command like so:
+  ```
+  bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate -O bam - bam/ind1.rmdup.bam
+  ```
+This will flag, but not remove, duplicates from our bam.
+
+*Note that the fastq files actually contain reads from multiple lanes, etc., as I grabbed them from high-coverage 1000 genomes bam files.  But for simplicity's sake in this tutorial, we'll ignore that.
+
+#### 
 
 
 
