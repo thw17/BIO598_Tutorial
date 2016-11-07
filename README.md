@@ -59,9 +59,31 @@ In the simplest cases, you need:
 * **sequencing reads (in fastq format - many processes are quicker if files are gzipped as well)**
 * **a computing environment with the storage, memory, and software required**
 
-#### Reference genome assembly
+#### Reference genome
 This is the pre-prepared reference genome assembly that you're going to use to map the sequencing reads from your project/experiment.  In a perfect world, this assembly is of a high-quality, has a good set of annotations available (e.g., genes, functional elements, repeats, etc.), and is relatively closely related to the species that you're studying.  This probably won't be a problem if you're working with a model organism, but in other situations you'll have to consider whether a good assembly is available for a taxon evolutionarily close enough for your purposes (if not, you might need to think about assembling a reference for your project _de novo_).  For today, we're working with example sequencing reads from human samples and we have the human reference genome available, so we'll be fine.
 
+Fasta format is a file format designed for DNA or protein sequences.  It looks something like (the first 10 lines of the ``` human_g1k_v37_MT.fasta``` file in the ```references``` directory:
+  ```
+  >MT
+  GATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTT
+  CGTCTGGGGGGTATGCACGCGATAGCATTGCGAGACGCTGGAGCCGGAGCACCCTATGTC
+  GCAGTATCTGTCTTTGATTCCTGCCTCATCCTATTATTTATCGCACCTACGTTCAATATT
+  ACAGGCGAACATACTTACTAAAGTGTGTTAATTAATTAATGCTTGTAGGACATAATAATA
+  ACAATTGAATGTCTGCACAGCCACTTTCCACACAGACATCATAACAAAAAATTTCCACCA
+  AACCCCCCCTCCCCCGCTTCTGGCCACAGCACTTAAACACATCTCTGCCAAACCCCAAAA
+  ACAAAGAACCCTAACACCAGCCTAACCAGATTTCAAATTTTATCTTTTGGCGGTATGCAC
+  TTTTAACAGTCACCCCCCAACTAACACATTATTTTCCCCTCCCACTCCCATACTACTAAT
+  CTCATCAATACAACCCCCGCCCATCCTACCCAGCACACACACACCGCTGCTAACCCCATA
+  ```
+Here, the name of the sequence, ```MT``` is given after ```>```.  The lines that follow contain the sequence itself.  Because most fasta files wrap lines every 50-80 characters (this isn't uniform across files, unfortunately), there will often be many lines composing each sequence.  This file should only contain a single sequence, the 1000 genomes reference MT sequence, that's 16-17kb in length.  We can quickly check to make sure using (the very, very powerful) [bioawk](https://github.com/lh3/bioawk), which we installed earlier:
+```
+bioawk -c fastx '{print ($name); print length($seq)}' human_g1k_v37_MT.fasta
+MT
+16569
+```
+We see that we do indeed have a single sequence called "MT" that's 16,569 bases in length.  
+
+#### Sequencing reads
 
 
 For today's tutorial, the reference genome is in the ``` reference ``` directory of this repository, the sequencing reads are in two files for each sample in the ``` fastq ``` directory of this repository, and the "Setting Up Anaconda" section above should take care of the software requirements.  Because we're working with a small dataset today, we won't need too much in the way of memory/storage, but bigger projects will often require at minimum a high-memory computer, but more likely high-performance computing clusters, dedicated servers, or online services such as Amazon Web Services.
