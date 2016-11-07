@@ -46,6 +46,5 @@ If you're in your environment, you can easily add additional programs and packag
 conda install <program/package name>
 ```
 
-For example, if we also want to take a look at Bowtie2, another read mapper (we'll use bwa today), we can easily add it by entering our environment ``` source activate BIO598 ``` and typing ``conda install bowtie2 ```
-
+For example, if we also want to take a look at Bowtie2, another read mapper (we'll use bwa today), we can easily add it by entering our environment ``` source activate BIO598 ``` and typing ```conda install bowtie2 ```
 
