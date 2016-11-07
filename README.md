@@ -17,7 +17,7 @@ This should create a directory called BIO598_Tutorial containing all of the cont
 #### Setting up Anaconda
 Anaconda is an environment and package manager for Python and it makes installation, environment management, etc. simple without requiring root or administrator access.  Fortunately, its framework has been leveraged for a project called bioconda that extends these capabailities to external programs.  All of the packages and programs we're using today can easily be installed with Anaconda/bioconda with the following steps:
 
-1. First, install Miniconda version 3.5 (available here)[http://conda.pydata.org/miniconda.html].  During installation, be sure to allow miniconda to append to your .bashrc or .bash_profile (this will add it and all programs it installs to your PATH).  If installation goes well, the command ``` which python ``` should result in something like ```/Users/<yourusername>/anaconda/bin/python ``` or ```/home/<yourusername>/anaconda/bin/python ```
+1. First, install Miniconda version 3.5 [available here](http://conda.pydata.org/miniconda.html).  During installation, be sure to allow miniconda to append to your .bashrc or .bash_profile (this will add it and all programs it installs to your PATH).  If installation goes well, the command ``` which python ``` should result in something like ```/Users/<yourusername>/anaconda/bin/python ``` or ```/home/<yourusername>/anaconda/bin/python ```
 
 2.  Add bioconda channels to conda with the following commands:
 ```
@@ -31,4 +31,4 @@ conda config --add channels bioconda
 ```
 conda create --name BIO598 python=3.5 snakemake fastqc bwa samtools bamtools picard samblaster freebayes bcftools snpsift bioawk
 ```
-This will create a working environment called BIO598 containing python 3.5 (python 3 is required for snakemake) and all of the tools listed in the command.  You can see the full list of programs available through bioconda listed here[https://bioconda.github.io/]
+This will create a working environment called BIO598 containing python 3.5 (python 3 is required for snakemake) and all of the tools listed in the command.  You can see the full list of programs available through bioconda [listed here](https://bioconda.github.io/)
