@@ -88,7 +88,7 @@ There are a few types of sequencing technologies out there, but Illumina is stil
 
 If you've sent your samples to a core for sequencing, they'll likely return to you a series of FASTQ files.  If you used single-end sequencing, your files can be concatenated into a single FASTQ file per sample per lane. On the other hand, if you used paired-end sequencing, you'll end up with two FASTQ files per sample per lane - one for the forward read and one for the reverse read (see the video I linked to in the previous paragraph for more information about the latter).  It's generally very important that paired reads are in the same order in both files.  If you're getting reads directly from a sequencing center, they're probably already organized this way.  However, you might have to sort and re-pair reads if you have, for example, stripped reads from a bam file containing an alignment (the README in the ```fastq``` directory explains how to do this, if needed).
 
-For today's tutorial, we have paired-end reads from two individuals: ind1 and ind2.  Forward reads are in files ending in "1.fastq.gz" and reverse reads are in the two files ending in "2.fastq.gz".  We can take a look at the first two reads in the file ```ind1_1.fastq.gz``` using ```zcat``` on Linux or ```gzcat``` on Mac/Unix:
+For today's tutorial, we have paired-end reads from two individuals: ind1 and ind2.  Forward reads are in files ending in "1.fastq.gz" and reverse reads are in the two files ending in "2.fastq.gz".  We can take a look at the first two reads in the file ```ind1_1.fastq.gz``` using ```zcat``` on Linux or ```gzcat``` on Mac/Unix combined with ```head```:
   ```
 zcat ind1_1.fastq.gz | head -n 8
 
@@ -102,13 +102,49 @@ CATATGAAGTCACCCTAGCCATCATTCTACTATCAACATTACTAATAAGTGGCTCCTTTAACCTCTCCACCCTTATCACA
 >?<>>>@?>?>?<>=?>>>>>>>?>>?A>;??????<?>?><??>?>?>>>=>??>A@>?@<?A???>@=>>??>>?@=@@=@=AA>@@=A>AA?A?@?A@>A@>A?@A@>?@??@=??@A>=?>@?@A?@??@>@A???@??@=@<@???@>@>@=A@A>>3?A?A???A??:A>@BA;>@9?;><4;@?@=<5:A=A?=@?@?A?@@AA@@A=@?@:@A?@>8A?8@@?=?AAAA?@7>A?B@?=770
 ```
 In these files, each sequencing read is listed in a series of four lines:
-* the ID line, beginning with @
+* the sequence identifier line, beginning with @
 * the sequence line (consisting of A, T, C, G, or N)
 * a comment line (here, the comment lines only contain +)
 * a quality score line (ASCII characters)
 
+The sequence identifier can contain a lot of information (see [Illumina's description for more information](http://support.illumina.com/help/SequencingAnalysisWorkflow/Content/Vault/Informatics/Sequencing_Analysis/CASAVA/swSEQ_mCA_FASTQFiles.htm)), the combination of which will identify individual reads uniquely.  For whatever reason, we've don't have records for the instrument or run number, and instead have IDs organized as: flowcellID:lane:tile:x_position:y_position.
 
+The sequence line here is 250 bases long and contains the nucleotide sequence corresponding to each read.
 
+The comment line usually either is a lone + or a + and then the sequence identifier repeated.  You'll generally ignore this line, but it's good to be aware of what's on it in case you're counting the number of reads belonging to a certain tile, for example.  In this case if the sequence identifier is repeated, your count will be double the actual number of reads coming from that tile.
+
+The quality score line contains an ASCII character for every nucleotide in the sequence (i.e., it'll be 250 characters long for a 250 base read, 75 characters long for a 75 base read, etc.).  Each ASCII character can be converted into a integer PHRED quality score, ranging from 0 to 93, that indicates the probability that a particular base call is incorrect.  [See more details here](http://www.drive5.com/usearch/manual/quality_score.html).
+
+If we want to quickly take a look at a summary of the reads in our fastq, we can use ```fastqc```. To analyze all of the files in the ```fastq``` directory, change to this directory and enter the command:
+  ```
+  fastqc *.fastq.gz
+  ```
+and it will quickly generate a series of reports for each fastq file that are summarized in the .html files (one per fastq).
+
+We can also use ```bioawk``` to parse and analyze fastq files as well.  For example we can count all of the reads in each file:
+  ```
+  for i in $(ls *.fastq.gz); do echo $i; bioawk -c fastx 'END{print NR}' $i; done
+  ind1_1.fastq.gz
+  5000
+  ind1_2.fastq.gz
+  5000
+  ind2_1.fastq.gz
+  5000
+  ind2_2.fastq.gz
+  5000
+  ```
+Or count the number of reads from tile 2111 in ```ind1_1.fastq.gz```:
+  ```
+  bioawk -c fastx '{print $name}' ind1_1.fastq.gz | grep ':2111:' | wc -l
+  ```
+Or count the number of reads from each tile in ```ind1_1.fastq.gz```:
+  ```
+  bioawk -c fastx '{print $name}' ind1_1.fastq.gz | cut -d':' -f 3 | sort | uniq -c
+  ```
+#### Programs
+Reference-based assembly requires a number of tools for steps including (but not limited to) read trimming, read mapping, bam processing (sorting, removing duplicates, adding read group information, etc.), variant calling, and variant filtering.  We installed everything we need for today's tutorial with the conda command above.  I'll discuss these steps in more detail below.
+
+### Assembly: Step-by-step
 For today's tutorial, the reference genome is in the ``` reference ``` directory of this repository, the sequencing reads are in two files for each sample in the ``` fastq ``` directory of this repository, and the "Setting Up Anaconda" section above should take care of the software requirements.  Because we're working with a small dataset today, we won't need too much in the way of memory/storage, but bigger projects will often require at minimum a high-memory computer, but more likely high-performance computing clusters, dedicated servers, or online services such as Amazon Web Services.
 
 
