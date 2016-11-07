@@ -25,7 +25,6 @@ conda config --add channels r
 conda config --add channels conda-forge
 conda config --add channels bioconda
 ```
-
 3. Create the environment we'll be working in and install required packages with the command:
 
 ```
