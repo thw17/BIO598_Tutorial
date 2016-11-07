@@ -149,6 +149,21 @@ For today's tutorial, the reference genome is in the ``` reference ``` directory
 
 So now we'll walk through the major steps of reference-based genome assembly and build a pipeline along the way.
 
+#### Preparing your reference
+Most reference genomes are quite large, so it's very inefficient to linearly search through, say, 3 billion characters spread across 25 sequences.  So, many programs use various hashing/indexing strategies to more efficiently handle the data. We'll create two of the most commonly required index files: .dict and .fai.  We'll also create the required index for ```bwa```, our read mapper.  This is all we'll need for our purposes today, but check any additional tools you incorporate into your work down the line to see if they require additional indexing or processing of reference assemblies.
+
+The three commands we'll use to prepare our reference, in the ```reference``` directory, are:
+  ```
+  samtools faidx human_g1k_v37_MT.fasta
+  
+  picard CreateSequenceDictionary R=human_g1k_v37_MT.fasta o=human_g1k_v37_MT.dict
+  
+  bwa index human_g1k_v37_MT.fasta
+  ```
+This will be quick on our small reference, but the bwa indexing in particular can take much longer on a full, human-sized reference.
+
+And that's it.  All of our reference files and indices are now contained in our reference directory.
+
 #### Fastq Quality Control
 The first thing you should do when you get fastq files is get a sense of their quality.  The quickest way to do this is to run ```fastqc``` and take a look at the reports.  We can run fastqc on every fastq file in references with the command:
   ```
