@@ -1,5 +1,5 @@
 # BIO598_Tutorial
-A hands-on tutorial introducing users to reproducible genome reassembly and variant calling
+A hands-on tutorial introducing users to reproducible reference-based genome assembly and variant calling.
 
 This tutorial has been tested on Mac and Linux operating systems and will assume you're working with one of these operating systems.
 
@@ -47,4 +47,10 @@ conda install <program/package name>
 ```
 
 For example, if we also want to take a look at Bowtie2, another read mapper (we'll use bwa today), we can easily add it by entering our environment ``` source activate BIO598 ``` and typing ```conda install bowtie2 ```
+
+## Reference-based genome assembly
+There are, in general, two main flavors of genome assembly.  _De novo_ assembly involves taking raw sequencing reads and piecing them together into a genome assembly using only the information contained in the reads and their metadata (e.g., the sequences themselves, insert sizes, etc.).  While a number of _de novo_ assemblers exist and there's a great deal of work being done to improve alogrithms, lengthen sequencing reads, develop methods to increase insert sizes, etc.), _de novo_ assembly remains challenging, expensive (usually 100x or greater sequencing depth), and computationally demanding.  Fortunately, if we have a reference genome available to us, we can make do with much less sequencing (often 30x coverage or less; low coverage - 1-5x - are not uncommon for other purposes), and use tools that require far less memory and storage.
+
+
+
 
