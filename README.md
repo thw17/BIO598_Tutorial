@@ -55,9 +55,9 @@ In this tutorial we'll walk through the basics of reference-based genome assembl
 
 ### What you you'll need
 In the simplest cases, you need:
-* ####a reference genome assembly (in fasta format)
-* ####sequencing reads (in fastq format - many processes are quicker if files are gzipped as well)
-* ####a computing environment with the storage, memory, and software required.
+* **a reference genome assembly (in fasta format)**
+* **sequencing reads (in fastq format - many processes are quicker if files are gzipped as well)**
+* **a computing environment with the storage, memory, and software required**
 
 #### Reference genome assembly
 This is the pre-prepared reference genome assembly that you're going to use to map the sequencing reads from your project/experiment.  In a perfect world, this assembly is of a high-quality, has a good set of annotations available (e.g., genes, functional elements, repeats, etc.), and is relatively closely related to the species that you're studying.  This probably won't be a problem if you're working with a model organism, but in other situations you'll have to consider whether a good assembly is available for a taxon evolutionarily close enough for your purposes (if not, you might need to think about assembling a reference for your project _de novo_).  For today, we're working with example sequencing reads from human samples and we have the human reference genome available, so we'll be fine.
