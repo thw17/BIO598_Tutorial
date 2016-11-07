@@ -27,7 +27,25 @@ Anaconda is an environment and package manager for Python and it makes installat
   ```
 * Create the environment we'll be working in and install required packages with the command:
 
+  ```
+  conda create --name BIO598 python=3.5 snakemake fastqc bwa samtools bamtools picard samblaster freebayes bcftools snpsift bioawk
+  ```
+This will create a working environment called BIO598 containing python 3.5 (python 3 is required for snakemake) and all of the tools listed in the command.  You can see the full list of programs available through bioconda [listed here](https://bioconda.github.io/) and the full list of python packages available through Anaconda [listed here](https://docs.continuum.io/anaconda/pkg-docs).
+
+You can load this environment with the command:
 ```
-conda create --name BIO598 python=3.5 snakemake fastqc bwa samtools bamtools picard samblaster freebayes bcftools snpsift bioawk
+source activate BIO598
 ```
-This will create a working environment called BIO598 containing python 3.5 (python 3 is required for snakemake) and all of the tools listed in the command.  You can see the full list of programs available through bioconda [listed here](https://bioconda.github.io/) and the full list of python packages available through Anaconda [listed here](https://docs.continuum.io/anaconda/pkg-docs)
+and leave the environment with the command:
+```
+source deactivate
+```
+
+If you're in your environment, you can easily add additional programs and packages with the command:
+```
+conda install <program/package name>
+```
+
+For example, if we also want to take a look at Bowtie2, another read mapper (we'll use bwa today), we can easily add it by entering our environment ``` source activate BIO598 ``` and typing ``conda install bowtie2 ```
+
+
