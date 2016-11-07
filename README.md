@@ -290,10 +290,11 @@ samtools index ind2.rmdup.sorted.bam
 And while we ran Freebayes on a single bam file before, it will just as easily take two files for joint calling:
 
 ```
-freebayes -f reference/human_g1k_v37_MT.fasta bam/ind1.rmdup.sorted.bam bam/ind2.rmdup.sorted.bam > vcf/ind1.raw.vcf
+freebayes -f reference/human_g1k_v37_MT.fasta bam/ind1.rmdup.sorted.bam bam/ind2.rmdup.sorted.bam > vcf/joint.raw.vcf
 ```
 
-
+### Making your pipeline reproducible
+So, now that we have our pipeline, it's time to make it as reproducible as possible.  There are a few reasons for this, including (but not limited to), allowing us to keep track of and control which versions of programs we're using, making it easy to share with collaborators, ensuring you know exactly what you did down the line, and making your research open so that other reviewers and researchers can reproduce your analyses and adapt them to their own research.
 
 
 
