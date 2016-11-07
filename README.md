@@ -199,8 +199,8 @@ While it's exciting that we've successfully mapped our first sample, there are t
   ```
   bwa mem -M reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samtools fixmate -O bam - bam/ind1.bam
   ```
-#### Processing our bam file: adding read groups, removing duplicates, and sorting.
-The bam file we just created contains all of our alignments, but it's currently unordered, unlabeled, and unfiltered.
+#### Processing our bam file: adding read groups, removing duplicates, sorting, and indexing.
+The bam file we just created contains all of our alignments, but it's currently unordered, unlabeled, unfiltered, and unindexed.
 
 ##### Adding read groups
 Read groups are very useful when you're working with multiple samples, sequencing lanes, flowcells, etc.  Importantly for us, it'll help our downstream variant caller label samples correctly and handle potential sequencing batch effects.  [Picard](https://broadinstitute.github.io/picard/command-line-overview.html) is very commonly used to add read groups to bam files, but ```bwa``` also has the ability to add read groups on the fly while mapping.  This latter option will save us time and space, so we'll add read groups to individual 1 with ```bwa``` by adding to our previous command:
@@ -209,7 +209,7 @@ Read groups are very useful when you're working with multiple samples, sequencin
   ```
 In a perfect world, we'd know more about our sample and could use these tags more appropriately.  ID is the name of a read group (containing a unique combination of the following tags).  SM is the sample name.  LB is the sequencing library. PU is the flowcell barcode.  PL is the sequencing technology.  A number of other options exist (see the [@RG section of the SAM/BAM specifications](https://samtools.github.io/hts-specs/SAMv1.pdf) for more information).
 
-*Note that the fastq files actually contain reads from multiple lanes, etc., as I grabbed them from high-coverage 1000 genomes bam files.  But for simplicity's sake in this tutorial, we'll ignore that.
+*Note that the fastq files actually contain reads from multiple lanes, etc., as I randomly grabbed them from high-coverage 1000 genomes bam files.  But for simplicity's sake in this tutorial, we'll ignore that.
 
 ##### Removing Duplicates
 During library preparation for sequencing, amplification steps can lead to PCR duplicates of reads.  The inclusion of duplicate reads can negatively affect our downstream analyses, so we need to remove them (this is the case with DNA sequencing - there's debate whether or not to do this in RNA-seq).  Most available tools, such as [Picard](https://broadinstitute.github.io/picard/command-line-overview.html), take a sorted bam file as input and output a sorted bam with duplicates either flagged or removed.  [Samblaster](https://github.com/GregoryFaust/samblaster), on the other hand, can take streaming output from bwa, which speeds up duplicate removal and allows us to produce one less bam file (saving us space).  We'll opt for Samblaster here, and incorporate it into our bwa command like so:
@@ -218,9 +218,81 @@ During library preparation for sequencing, amplification steps can lead to PCR d
   ```
 This will flag, but not remove, duplicates from our bam.
 
-*Note that the fastq files actually contain reads from multiple lanes, etc., as I grabbed them from high-coverage 1000 genomes bam files.  But for simplicity's sake in this tutorial, we'll ignore that.
+*Note that the fastq files actually contain reads from multiple lanes, etc., as I randomly grabbed them from high-coverage 1000 genomes bam files.  But for simplicity's sake in this tutorial, we'll ignore that.
 
-#### 
+##### Sorting bam files
+If we weren't piping data directly to Samblaster, and instead using a different tool for duplicate removal, we'd have to sort our bam (in genome coordinate order) first.  But because we were able to build duplicate removal and adding our read groups into our pipeline, sorting will come last.
+
+Sorting doesn't require too much explanation.  The most genomes are huge, so it's inefficient to move across unsorted bam files (we need access to all reads covering a given base for variant calling, for example).  ```samtools sort ``` is widely used, and that's what we'll employ here.  Like our previous tools, it handles streaming input, so we can simply add to our previous command to save space:
+  ```
+  bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o ind1.rmdup.sorted.bam -
+  ```
+
+
+So, now, after running our command, we can view the first 10 lines of ```ind1.rmdup.sorted.bam``` with the command:
+  ```
+  samtools view -h ind1.rmdup.sorted.bam | head
+  ```
+```samtools``` is required to view the bam file because of how it is compressed.  The ```-h``` flag ensures that the bam header is printed along with the records.
+
+Anyway, that command will give the following output:
+  ```
+  @HD     VN:1.3  SO:coordinate
+  @SQ     SN:MT   LN:16569
+  @RG     ID:ind1 SM:ind1 LB:ind1 PU:ind1 PL:Illumina
+  @PG     ID:bwa  PN:bwa  VN:0.7.15-r1140 CL:bwa mem -M -R @RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina human_g1k_v37_MT.fasta ind1_1.fastq.gz ind1_2.fastq.gz
+  @PG     ID:SAMBLASTER   VN:0.1.23       CL:samblaster -i stdin -o stdout -M
+  H7AGFADXX131213:1:1216:6248:58707       353     MT      1       60      216H34M =       1       206     GATCACAGGTCTATCACCCTATTAACCACTCACG      ;@8<B=A>>17@???A=@@B@@A@A>?A?A<95)      NM:i:0  MD:Z:34 AS:i:34 XS:i:0  RG:Z:ind1       SA:Z:MT,16354,+,216M34S,60,2;
+  H7AGFADXX131213:1:1115:9742:18153       99      MT      1       60      122S128M        =       1       193     TCGCTCCGGGCCCATAACACTTGGGGGTAGCTAAAGTGAACTGTATCCGACATCTGGTTCCTACTTCAGGGCCATAAAGCCTAAATAGCCCACACGTTCCCCTTAAATAAGACATCACGATGGATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTATGCACGCGATAGCATTGCGAGACGCTGGAGCCGGAGCACCCTATGTCGCAGTATC      >>5?@>?7=>?>>?>>><?<?>>>>==>>>@?>??>>>?><A>=>>>=8@<?>>@=>?<=>@?=AA?@?>?@@@@AAA??@BAAA@???@>A>A>9??@@@@A??@A@AA??=@?@A>9B?@?A?@@>@?@??@@>@A=??BA?@>?>?@=@@@>:?@B@AA?A@@A@??A@@@>=???B@B@9??@@>>@@<&==>@A>9?:B?@?@=>A>@9B???7=@<<B?@A9>B?AA=A?A@??>?7B@?9968      NM:i:0  MD:Z:128        AS:i:128        XS:i:0  RG:Z:ind1       SA:Z:MT,16448,+,122M128S,60,1;  MQ:i:60
+  H7AGFADXX131213:1:1203:19236:9314       99      MT      1       60      93S157M =       1       240     GCTAAAGTGAACTGTATCCGACATCTGGTTCCTACTTCAGGGCCATAAAGCCTAAATAGCCCACACGTTCCCCTTAAATAAGACATCACGATGGATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGAATGCACGCGATAGCATTGCGAGACGCTGGAGCCGGAGCACCCTATGTCGCAGTATCTGTCTTTGATTCCTGCCTCATCCCATTAT      >>=?@@=@>??<@6:>>><6@<??=@:6=>==A><@>=><3>>?@?=>@>>@A??@>>?@=?>>@=9?A>==@@?@@@=>=<@=B??@<'@5=;@>?@=@==@=@=?=?;A?B??@?@==?>B?A588<A>A<>@<?@?==><?@=);<>@@B;&?;A>4;3/1&3<;5>;'27B<53:<=?/:4?&?=2=@=>@??A9@??=A???C@?=1=,:&9@,=?@>@>AAA@A@?==@>?AA@>?=>?1:77;      NM:i:2  MD:Z:71T79T5    AS:i:147        XS:i:0  RG:Z:ind1       SA:Z:MT,16477,+,93M157S,60,1;   MQ:i:60
+  H7AGFADXX131213:1:2110:2821:77416       163     MT      1       60      89S161M =       1       225     AAGTGAACTGTATCCGACATCTGGTTCCTACTTCAGGGCCATAAAGCCTAAATAGCCCACACGTTCCCCTTAAATAAGACATCACGATGGATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTATGCACGCGATAGCATTGCGAGACGCTGGAGCCGGAGCACCCTATGTCGCAGTATCTGTCTTTGATTCCTGCCTCATCCCATTATTTAT      <=;=><8<A>@>>>=71<?>>>>>>?>>?><??>>>=>>>>>>?>>>>?>?>>>>@?>?<@=7??????A@?@?@?@?@=@??@=9B===A@@A>@>@@@A@@@A>?AB??@A@=>@=@?@=5@<B@AB?@??A?@@@@@@=?@@@B@A@:?@B@??8;;8<?@@A>:@:B?@@@A@@>@:B@A<7AA=@@=B?:@<?AA>A?B@@@@@7>>;???@A>@@AAA?A@@@?19=><@A@@?@A@??@?>==      NM:i:1  MD:Z:151T9      AS:i:156        XS:i:0  RG:Z:ind1       SA:Z:MT,16481,+,89M161S,60,1;   MQ:i:60
+  H7AGFADXX131213:1:1211:16620:80940      353     MT      1       60      213H37M =       1       221     GATCACAGGTCTATCACCCTATTAACCACTCACGGGA   @A??@=@??@@A@>@A=??A@?A>@=?A>A@@=251/   NM:i:0  MD:Z:37 AS:i:37 XS:i:0  RG:Z:ind1       SA:Z:MT,16357,+,213M37S,60,1;
+  ```
+You can see that there are a few changes.  Most notably, there is a @HD line in the header indicating that the file is sorted in coordinate order, we have an additional @PG flag with information about the SAMBLASTER command, and we now have a @RG line in the header with our read group information and a RG tag on each record with its corresponding read group ID (here they're all ind1).
+
+##### Indexing
+Again, bam files can get pretty big and they're compressed, so we need to index them for other tools to use them.  Here's a simple command for indexing our bam (from our main directory):
+  ```
+  samtools index bam/ind1.rmdup.sorted.bam
+  ```
+This creates a file with a .bai extension that needs to remain in the same directory as its corresponding bam.
+
+##### Variant calling
+Now that our bam is processed and indexed, it's time to call variants!!  There are a few popular variant callers in use, but today we'll be using [Freebayes](https://github.com/ekg/freebayes) because it works well on both Mac and Linux and can be easily installed via conda.  Freebayes is extremely flexible (it allows a great deal of performance tuning, handles atypical ploidy, can take tumor/normal pairings, etc.), but it's simplest case is perfect for us today.  From our main directory, enter the command:
+  ```
+  freebayes -f reference/human_g1k_v37_MT.fasta bam/ind1.rmdup.sorted.bam > vcf/ind1.raw.vcf
+  ```
+The resulting list of variants is quite small.  Because the mitochondrial genome is haploid, we really only expect to see variant records for sites where individual 1 differs from the reference. However, because there are so many copies of mitochondria sequenced during normal genome sequencing, we might expect a bit of heteroplasmy and the possibility of heterozygous calls.
+
+We can print all heterozygous calls with a site quality greater than 30 (less than a 1 in 1000 chance of being incorrectly identified as a polymorphic site) to the screen with the following command (using SnpSift from the main directory):
+  ```
+  cat vcf/ind1.raw.vcf | SnpSift filter "'(isHet(GEN[0])) & (QUAL >= 30)'" 
+  ```
+* Note that we have to use double quotes around the single quotes because of how conda wraps SnpSift.  SnpSift is actually a .jar file that has to be called using java (e.g., ```java -Xmx2g -jar SnpSift.jar ...```).  Conda wraps the command line in a bash script, and to pass your filter expression ```'(isHet(GEN[0])) & (QUAL >= 30)'``` to a bash script from a command line, you have to enclose it in double quotes.  If you were to use a version of SnpSift that you downloaded directly (as a .jar), you'd have to add the java arguments before calling SnpSift and remove the double quotes (leaving only the single quotes).
+
+You should see four heterozygous calls passing filters, along with the full VCF header.  While each caller, unfortunately, produces its own version of a VCF, the header usually contains a very detailed description of how to interpret the file.
+
+#### Putting it all together
+To run our pipeline on our two samples, we can simply run the following commands:
+
+```
+bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o ind1.rmdup.sorted.bam -
+```
+```
+samtools index ind1.rmdup.sorted.bam
+```
+```
+bwa mem -M -R '@RG\tID:ind2\tSM:ind2\tLB:ind2\tPU:ind2\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind2_1.fastq.gz fastq/ind2_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o ind2.rmdup.sorted.bam -
+```
+```
+samtools index ind2.rmdup.sorted.bam
+```
+And while we ran Freebayes on a single bam file before, it will just as easily take two files for joint calling:
+
+```
+freebayes -f reference/human_g1k_v37_MT.fasta bam/ind1.rmdup.sorted.bam bam/ind2.rmdup.sorted.bam > vcf/ind1.raw.vcf
+```
+
 
 
 
