@@ -1,7 +1,7 @@
 # BIO598_Tutorial
 A hands-on tutorial introducing users to reproducible reference-based genome assembly and variant calling.
 
-This tutorial has been tested on Mac and Linux operating systems and will assume you're working with one of these operating systems.
+This tutorial has been tested on a Linux operating system and will assume you're working with it.  Almost everything should work for Mac too, except conda doesn't seem to install Samblaster.  This can be installed easily with brew, however, and everything else should work well.
 
 ## Setting up your environment
 For today's tutorial, you'll need this repository and Anaconda.
@@ -225,7 +225,7 @@ If we weren't piping data directly to Samblaster, and instead using a different 
 
 Sorting doesn't require too much explanation.  The most genomes are huge, so it's inefficient to move across unsorted bam files (we need access to all reads covering a given base for variant calling, for example).  ```samtools sort ``` is widely used, and that's what we'll employ here.  Like our previous tools, it handles streaming input, so we can simply add to our previous command to save space:
   ```
-  bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o ind1.rmdup.sorted.bam -
+  bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o bam/ind1.rmdup.sorted.bam -
   ```
 
 
@@ -276,16 +276,16 @@ You should see four heterozygous calls passing filters, along with the full VCF 
 To run our pipeline on our two samples, we can simply run the following commands:
 
 ```
-bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o ind1.rmdup.sorted.bam -
+bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o bam/ind1.rmdup.sorted.bam -
 ```
 ```
-samtools index ind1.rmdup.sorted.bam
+samtools index bam/ind1.rmdup.sorted.bam
 ```
 ```
-bwa mem -M -R '@RG\tID:ind2\tSM:ind2\tLB:ind2\tPU:ind2\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind2_1.fastq.gz fastq/ind2_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o ind2.rmdup.sorted.bam -
+bwa mem -M -R '@RG\tID:ind2\tSM:ind2\tLB:ind2\tPU:ind2\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind2_1.fastq.gz fastq/ind2_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o bam/ind2.rmdup.sorted.bam -
 ```
 ```
-samtools index ind2.rmdup.sorted.bam
+samtools index bam/ind2.rmdup.sorted.bam
 ```
 And while we ran Freebayes on a single bam file before, it will just as easily take two files for joint calling:
 
