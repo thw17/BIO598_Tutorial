@@ -429,10 +429,16 @@ Now we can easily share our environment file, ```BIO598.yml```, with anyone.  Th
 This will create an environment called ```BIO598``` on their computer (because of the "name" row in the .yml file).
 
 ### Sharing your pipeline
+
 #### Bash script
 Now that you're able to share your environment, what about your pipeline?  One option is that you can simply share your list of commands, and ask users to run them on their own.  You could make this easy for them by creating a short shell script.  I've included one in the main directory, ```example.sh```.  If we look inside (try ```cat example.sh```), we can see that it's very similar to our list of commands:
 ```
 #!/usr/bin/env bash
+
+# Prepare reference
+samtools faidx reference/human_g1k_v37_MT.fasta
+picard CreateSequenceDictionary R=reference/human_g1k_v37_MT.fasta o=reference/human_g1k_v37_MT.dict
+bwa index reference/human_g1k_v37_MT.fasta
 
 # Process sample 1 (ind1)
 bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o bam/ind1.rmdup.sorted.bam -
@@ -451,7 +457,7 @@ The one difference is the first line, ```#!/usr/bin/env bash```, which is called
 ```
 ./example.sh
 ```
-and you should see that our pipeline is runs exactly as it did earlier, only now using a single command.  Note that the ```./``` is required for your shell to recognize your script as a program.
+and you should see that our pipeline is runs exactly as it did earlier, only now using a single command (you might have gotten an "Exception in thread "main" picard.PicardException..." error along the way - this will happen if you did not delete the .dict file before starting, as it won't overwrite).  Note that the ```./``` is required for your shell to recognize your script as a program.
 
 One quick note: if we want others to be able to use our script (either to run it, or adapt it for their own purposes), we need to ensure that the script gives everyone permission to read, write, or execute it.  You can do this with the ```chmod``` command:
 ```
@@ -460,7 +466,9 @@ chmod 777 example.sh
 This will allow _anyone_ to read, write, or run your script.  If you need to limit some aspects of reading/writing/executing, see [this page](http://ss64.com/bash/chmod.html) for more information on the different codes you can use.
 
 #### Snakemake
+So, for the general purpose of sharing our analyses, a bash script works well.  But what if we want to allow users to flexibly add more samples or change the reference genome?  What about if we need to run processes in parallel on a high performance cluster (this isn't a worry for our tiny example, but is often critical when working with real genomic datasets)?
 
+One solution is [Snakemake](https://bitbucket.org/johanneskoester/snakemake/wiki/Home), a program that allows users to construct workflows in Python.  I will only provide a very, very brief introduction in this tutorial.  For more information, I highly recommend checking out the [official tutorial](http://snakemake.bitbucket.org/snakemake-tutorial.html), [reading the documentation](https://bitbucket.org/snakemake/snakemake/wiki/Documentation), and browsing the [Google group](https://groups.google.com/forum/#!forum/snakemake).
 
 
 
