@@ -31,6 +31,7 @@ Anaconda is an environment and package manager for Python and it makes installat
   conda create --name BIO598 python=3.5 snakemake fastqc bwa samtools bamtools picard freebayes bcftools snpsift bioawk
   ```
 * Load the new environment and add the samblaster package
+
   ```
   source activate BIO598
   conda install -c biobuilds samblaster
