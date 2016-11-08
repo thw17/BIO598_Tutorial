@@ -318,13 +318,15 @@ Now that our bam is processed and indexed, it's time to call variants!!  There a
   ```
 The resulting list of variants is quite small.  Because the mitochondrial genome is haploid, we really only expect to see variant records for sites where individual 1 differs from the reference. However, because there are so many copies of mitochondria sequenced during normal genome sequencing, we might expect a bit of heteroplasmy and the possibility of heterozygous calls.
 
-We can print all heterozygous calls with a site quality greater than 30 (less than a 1 in 1000 chance of being incorrectly identified as a polymorphic site) to the screen with the following command (using SnpSift from the main directory):
+We can print all heterozygous calls with a site quality greater than 30 (less than a 1 in 1000 chance of being incorrectly identified as a polymorphic site) to the screen using SnpSift with the following command (from the main directory):
   ```
   cat vcf/ind1.raw.vcf | SnpSift filter "'(isHet(GEN[0])) & (QUAL >= 30)'" 
   ```
 * Note that we have to use double quotes around the single quotes because of how conda wraps SnpSift.  SnpSift is actually a .jar file that has to be called using java (e.g., ```java -Xmx2g -jar SnpSift.jar ...```).  Conda wraps the command line in a bash script, and to pass your filter expression ```'(isHet(GEN[0])) & (QUAL >= 30)'``` to a bash script from a command line, you have to enclose it in double quotes.  If you were to use a version of SnpSift that you downloaded directly (as a .jar), you'd have to add the java arguments before calling SnpSift and remove the double quotes (leaving only the single quotes).
 
 You should see four heterozygous calls passing filters, along with the full VCF header.  While each caller, unfortunately, produces its own version of a VCF, the header usually contains a very detailed description of how to interpret the file.
+
+That's all we're going to do in terms of filtering vcf files today. In case you're interested in doing more filtering, SnpSift is a very flexible and powerful vcf parser.  You can find out more about what it can do [here](http://snpeff.sourceforge.net/SnpSift.html).  We also downloaded bcftools, which is another useful tool for working with vcf files ([check out the manual here](https://samtools.github.io/bcftools/bcftools.html))
 
 ### Putting it all together
 To run our pipeline on our two samples, we can simply run the following commands:
@@ -353,8 +355,79 @@ And while we ran Freebayes on a single bam file before, it will just as easily t
 freebayes -f reference/human_g1k_v37_MT.fasta bam/ind1.rmdup.sorted.bam bam/ind2.rmdup.sorted.bam > vcf/joint.raw.vcf
 ```
 
-### Making your pipeline reproducible
-So, now that we have our pipeline, it's time to make it as reproducible as possible.  There are a few reasons for this, including (but not limited to), allowing us to keep track of and control which versions of programs we're using, making it easy to share with collaborators, ensuring you know exactly what you did down the line, and making your research open so that other reviewers and researchers can reproduce your analyses and adapt them to their own research.
+## Making your pipeline reproducible
+So, now that we have our pipeline, it's time to make it as reproducible as possible.  There are a few reasons for this, including (but not limited to), allowing us to keep track of and control which versions of programs we're using, making it easy to share with collaborators, ensuring you know exactly what you did down the line, and making your research open so that reviewers and other researchers can reproduce your analyses and adapt them to their own research.
+
+Luckily, by working with Anaconda, we can easily share our environment (including exact versions of tools).  To do this, we can enter the command:
+  ```
+  conda env export > environment.yml
+  ```
+and we'll get a file that looks something like:
+  ```
+  name: BIO598
+  channels: !!python/tuple
+  - !!python/unicode
+    'bioconda'
+  - !!python/unicode
+    'defaults'
+  dependencies:
+  - biobuilds::samblaster=0.1.23=0
+  - bioconda::bcftools=1.3.1=1
+  - bioconda::bioawk=1.0=0
+  - bioconda::bwa=0.7.15=0
+  - bioconda::curl=7.45.0=2
+  - bioconda::dropbox=5.2.1=py35_0
+  - bioconda::fastqc=0.11.5=1
+  - bioconda::filechunkio=1.6=py35_0
+  - bioconda::freebayes=1.0.2.29=py35_2
+  - bioconda::ftputil=3.2=py35_0
+  - bioconda::java-jdk=8.0.92=1
+  - bioconda::picard=2.5.0=1
+  - bioconda::pysftp=0.2.8=py35_0
+  - bioconda::samtools=1.3.1=4
+  - bioconda::snakemake=3.8.2=py35_0
+  - bioconda::snpsift=4.3=1
+  - bioconda::urllib3=1.12=py35_0
+  - cffi=1.8.3=py35_0
+  - cryptography=1.5.3=py35_0
+  - docutils=0.12=py35_2
+  - idna=2.1=py35_0
+  - libgcc=4.8.5=1
+  - ncurses=5.9=8
+  - openssl=1.0.2j=0
+  - paramiko=2.0.2=py35_0
+  - pip=9.0.1=py35_0
+  - pyasn1=0.1.9=py35_0
+  - pycparser=2.16=py35_0
+  - python=3.5.2=0
+  - pyyaml=3.12=py35_0
+  - readline=6.2=2
+  - requests=2.11.1=py35_0
+  - setuptools=27.2.0=py35_0
+  - six=1.10.0=py35_0
+  - sqlite=3.13.0=0
+  - tk=8.5.18=0
+  - wheel=0.29.0=py35_0
+  - wrapt=1.10.8=py35_0
+  - xz=5.2.2=0
+  - yaml=0.1.6=0
+  - zlib=1.2.8=3
+  prefix: /Users/thw/anaconda/envs/BIO598
+  
+  ```
+This is perfect, except for the prefix line at the end (which will get in the way for future users that don't have the same prefix).  So, we'll need to delete that line.  You can do this in a text editor like ```nano``` or ```vi``` (both come standard in most Linux/UNIX environments).  If you haven't used ```vi``` or something similar before, you're probably going to have huge issues writing, saving, and exiting, so I would probably avoid it for now.  ```nano``` can be used by simply typing ```nano <filename>```, using your keyboard arrows to move down to the bottom of the file, deleting the last two lines, and following the instructions on the bottom of the screen to exit.
+
+We can also delete the last line of the file easily with ```sed```.  The command for doing so is ```sed '$d' <filename>```. This will print the file, without its last line, to the screen.  If your file is like mine, with one blank line at the end, and the prefix statement on the second to last line, we can delete both and print to a new file with:
+  ```
+  sed '$d' environment.yml | sed '$d' > BIO598.yml
+  ```
+Now we can easily share our environment file, ```BIO598.yml```, with anyone.  They can then create an identical environment with the command:
+  ```
+  conda env create -f BIO598.yml
+  ```
+This will create an environment called ```BIO598``` on their computer (because of the "name" row in the .yml file).
+
+
 
 
 
