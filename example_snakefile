@@ -1,0 +1,57 @@
+samples = ["ind1", "ind2"]
+genome_path = "reference/human_g1k_v37_MT.fasta"
+genome_prefix = "reference/human_g1k_v37_MT"
+
+rule all:
+	input:
+		"vcf/joint.raw.vcf",
+		expand("stats/{sample}.rmdup.sorted.bam.stats", sample=samples)
+
+rule prepare_reference:
+	input:
+		genome_path
+	output:
+		fai = genome_path + ".fai",
+		amb = genome_path + ".amb",
+		dict = genome_prefix + ".dict"
+	shell:
+		"samtools faidx {input} && picard CreateSequenceDictionary R={input} o={output.dict} && bwa index {input}"
+
+rule mapping_and_processing:
+	input:
+		ref = genome_path,
+		idx = genome_path + ".amb",
+		fq1 = "fastq/{sample}_1.fastq.gz",
+		fq2 = "fastq/{sample}_2.fastq.gz"
+	output:
+		"bam/{sample}.rmdup.sorted.bam"
+	params:
+		rgs = repr('@RG\tID:{sample}\tSM:{sample}\tLB:{sample}\tPU:{sample}\tPL:Illumina')
+	shell:
+		"bwa mem -M -R {params.rgs} {input.ref} {input.fq1} {input.fq2} | samblaster -M | samtools fixmate - - | samtools sort -O bam -o {output} -"
+
+rule index_bam:
+	input:
+		"bam/{sample}.rmdup.sorted.bam"
+	output:
+		"bam/{sample}.rmdup.sorted.bam.bai"
+	shell:
+		"samtools index {input}"
+
+rule bam_stats:
+	input:
+		"bam/{sample}.rmdup.sorted.bam"
+	output:
+		"stats/{sample}.rmdup.sorted.bam.stats"
+	shell:
+		"samtools stats {input} | grep ^SN | cut -f 2- > {output}"
+
+rule joint_freebayes_calling:
+	input:
+		bam = expand("bam/{sample}.rmdup.sorted.bam", sample=samples),
+		bai = expand("bam/{sample}.rmdup.sorted.bam.bai", sample=samples),
+		ref = genome_path
+	output:
+		"vcf/joint.raw.vcf"
+	shell:
+		"freebayes -f {input.ref} {input.bam} > {output}"
