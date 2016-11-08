@@ -28,7 +28,7 @@ Anaconda is an environment and package manager for Python and it makes installat
 * Create the environment we'll be working in and install required packages with the command:
 
   ```
-  conda create --name BIO598 python=3.5 snakemake fastqc bwa samtools bamtools picard freebayes bcftools snpsift bioawk
+  conda create --name BIO598 python=3.5 snakemake fastqc bwa samtools picard freebayes bcftools snpsift bioawk
   ```
 * Load the new environment and add the samblaster package
 
@@ -266,7 +266,52 @@ Again, bam files can get pretty big and they're compressed, so we need to index 
   ```
 This creates a file with a .bai extension that needs to remain in the same directory as its corresponding bam.
 
-##### Variant calling
+##### Summarizing the contents of your bam file
+Now that we have our final bam file, we might be interested in knowing what it contains.  More specifically, we should get a sense of how many duplicates there were, how successful mapping was, and other measures along those lines.  Fortunately, [samtools offers tools to calculate summary statistics](http://www.htslib.org/doc/samtools.html).  We'll calculate stats using ```samtools stats``` because it provides a bit more detail, but you should have a look at ```samtools flagstat``` as well.  From our main directory, enter the command:
+  ```
+  samtools stats bam/ind1.rmdup.sorted.bam | grep ^SN | cut -f 2- > stats/ind1.rmdup.sorted.bam.stats
+  ```
+Because samtools stats offers a huge range of statistics including a number of very big tables in our output, we'll just grab the summary statistics.  This is what ```grep ^SN | cut -f 2-``` does.
+
+We can print the contents of each file to screen using the ```cat``` command.  Here's the command and its result for the samtools stats output:
+  ```
+  cat stats/ind1.rmdup.sorted.bam.stats
+  
+  raw total sequences:	10000
+  filtered sequences:	0
+  sequences:	10000
+  is sorted:	1
+  1st fragments:	5000
+  last fragments:	5000
+  reads mapped:	9882
+  reads mapped and paired:	9764	# paired-end technology bit set + both mates mapped
+  reads unmapped:	118
+  reads properly paired:	9616	# proper-pair bit set
+  reads paired:	10000	# paired-end technology bit set
+  reads duplicated:	12	# PCR or optical duplicate bit set
+  reads MQ0:	0	# mapped and MQ=0
+  reads QC failed:	0
+  non-primary alignments:	117
+  total length:	2490364	# ignores clipping
+  bases mapped:	2460864	# ignores clipping
+  bases mapped (cigar):	2411834	# more accurate
+  bases trimmed:	0
+  bases duplicated:	3000
+  mismatches:	21935	# from NM fields
+  error rate:	9.094738e-03	# mismatches / bases mapped (cigar)
+  average length:	249
+  maximum length:	250
+  average quality:	25.9
+  insert size average:	566.3
+  insert size standard deviation:	902.9
+  inward oriented pairs:	4669
+  outward oriented pairs:	80
+  pairs with other orientation:	2
+  pairs on different chromosomes:	0
+  ```
+As you can see, it gives us a lot of information about number of reads, mapping, pairing, etc.  A quick glance shows us that our mapping was quite successful (9882 out of 10000 reads mapped).  We also had very few PCR duplicates (12 reads - note that this can be calculated because we flagged, but didn't remove duplicates using samblaster earlier), but this is probably because I randomly sampled read pairs to create our fastq files.
+
+#### Variant calling
 Now that our bam is processed and indexed, it's time to call variants!!  There are a few popular variant callers in use, but today we'll be using [Freebayes](https://github.com/ekg/freebayes) because it works well on both Mac and Linux and can be easily installed via conda.  Freebayes is extremely flexible (it allows a great deal of performance tuning, handles atypical ploidy, can take tumor/normal pairings, etc.), but it's simplest case is perfect for us today.  From our main directory, enter the command:
   ```
   freebayes -f reference/human_g1k_v37_MT.fasta bam/ind1.rmdup.sorted.bam > vcf/ind1.raw.vcf
@@ -281,7 +326,7 @@ We can print all heterozygous calls with a site quality greater than 30 (less th
 
 You should see four heterozygous calls passing filters, along with the full VCF header.  While each caller, unfortunately, produces its own version of a VCF, the header usually contains a very detailed description of how to interpret the file.
 
-#### Putting it all together
+### Putting it all together
 To run our pipeline on our two samples, we can simply run the following commands:
 
 ```
@@ -291,10 +336,16 @@ bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/h
 samtools index bam/ind1.rmdup.sorted.bam
 ```
 ```
+samtools stats bam/ind1.rmdup.sorted.bam | grep ^SN | cut -f 2- > stats/ind1.rmdup.sorted.bam.stats
+```
+```
 bwa mem -M -R '@RG\tID:ind2\tSM:ind2\tLB:ind2\tPU:ind2\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind2_1.fastq.gz fastq/ind2_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o bam/ind2.rmdup.sorted.bam -
 ```
 ```
 samtools index bam/ind2.rmdup.sorted.bam
+```
+```
+samtools stats bam/ind2.rmdup.sorted.bam | grep ^SN | cut -f 2- > stats/ind2.rmdup.sorted.bam.stats
 ```
 And while we ran Freebayes on a single bam file before, it will just as easily take two files for joint calling:
 
