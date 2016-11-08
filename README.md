@@ -124,11 +124,11 @@ The comment line usually either is a lone + or a + and then the sequence identif
 
 The quality score line contains an ASCII character for every nucleotide in the sequence (i.e., it'll be 250 characters long for a 250 base read, 75 characters long for a 75 base read, etc.).  Each ASCII character can be converted into a integer PHRED quality score, ranging from 0 to 93, that indicates the probability that a particular base call is incorrect.  [See more details here](http://www.drive5.com/usearch/manual/quality_score.html).
 
-If we want to quickly take a look at a summary of the reads in our fastq, we can use ```fastqc```. To analyze all of the files in the ```fastq``` directory, change to this directory and enter the command:
+If we want to quickly take a look at a summary of the reads in our fastq, we can use ```fastqc```. To analyze all of the files in the ```fastq``` directory and output the results to the ```stats``` directory, enter the following command from our main directory:
   ```
-  fastqc *.fastq.gz
+  fastqc -c fastq/*.fastq.gz
   ```
-and it will quickly generate a series of reports for each fastq file that are summarized in the .html files (one per fastq).
+and it will quickly generate a series of reports for each fastq file that are summarized in the .html files (one per fastq) that you can view using your browser (e.g., Firefox, Chrome, etc.).
 
 We can also use ```bioawk``` to parse and analyze fastq files as well.  For example we can count all of the reads in each file:
   ```
