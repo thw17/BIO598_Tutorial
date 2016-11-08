@@ -358,6 +358,7 @@ freebayes -f reference/human_g1k_v37_MT.fasta bam/ind1.rmdup.sorted.bam bam/ind2
 ## Making your pipeline reproducible
 So, now that we have our pipeline, it's time to make it as reproducible as possible.  There are a few reasons for this, including (but not limited to), allowing us to keep track of and control which versions of programs we're using, making it easy to share with collaborators, ensuring you know exactly what you did down the line, and making your research open so that reviewers and other researchers can reproduce your analyses and adapt them to their own research.
 
+### Sharing your environment
 Luckily, by working with Anaconda, we can easily share our environment (including exact versions of tools).  To do this, we can enter the command:
   ```
   conda env export > environment.yml
@@ -415,7 +416,7 @@ and we'll get a file that looks something like:
   prefix: /Users/thw/anaconda/envs/BIO598
   
   ```
-This is perfect, except for the prefix line at the end (which will get in the way for future users that don't have the same prefix).  So, we'll need to delete that line.  You can do this in a text editor like ```nano``` or ```vi``` (both come standard in most Linux/UNIX environments).  If you haven't used ```vi``` or something similar before, you're probably going to have huge issues writing, saving, and exiting, so I would probably avoid it for now.  ```nano``` can be used by simply typing ```nano <filename>```, using your keyboard arrows to move down to the bottom of the file, deleting the last two lines, and following the instructions on the bottom of the screen to exit.
+This is perfect, except for the prefix line at the end (which will get in the way for future users that don't have the same prefix).  So, we'll need to delete that line.  You can do this in a text editor like ```nano``` or ```vi``` (both come standard in most Linux/UNIX environments).  If you haven't used ```vi``` or something similar before, you're probably going to have huge issues writing, saving, and exiting, so I would probably avoid it for now.  ```nano``` can be used by simply typing ```nano <filename>```, using your keyboard arrows to move down to the bottom of the file, manually deleting the last two lines, and following the instructions on the bottom of the screen to exit.
 
 We can also delete the last line of the file easily with ```sed```.  The command for doing so is ```sed '$d' <filename>```. This will print the file, without its last line, to the screen.  If your file is like mine, with one blank line at the end, and the prefix statement on the second to last line, we can delete both and print to a new file with:
   ```
@@ -427,6 +428,38 @@ Now we can easily share our environment file, ```BIO598.yml```, with anyone.  Th
   ```
 This will create an environment called ```BIO598``` on their computer (because of the "name" row in the .yml file).
 
+### Sharing your pipeline
+#### Bash script
+Now that you're able to share your environment, what about your pipeline?  One option is that you can simply share your list of commands, and ask users to run them on their own.  You could make this easy for them by creating a short shell script.  I've included one in the main directory, ```example.sh```.  If we look inside (try ```cat example.sh```), we can see that it's very similar to our list of commands:
+```
+#!/usr/bin/env bash
+
+# Process sample 1 (ind1)
+bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o bam/ind1.rmdup.sorted.bam -
+samtools index bam/ind1.rmdup.sorted.bam
+samtools stats bam/ind1.rmdup.sorted.bam | grep ^SN | cut -f 2- > stats/ind1.rmdup.sorted.bam.stats
+
+# Process sample 2 (ind2)
+bwa mem -M -R '@RG\tID:ind2\tSM:ind2\tLB:ind2\tPU:ind2\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind2_1.fastq.gz fastq/ind2_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o bam/ind2.rmdup.sorted.bam -
+samtools index bam/ind2.rmdup.sorted.bam
+samtools stats bam/ind2.rmdup.sorted.bam | grep ^SN | cut -f 2- > stats/ind2.rmdup.sorted.bam.stats
+
+# Jointly call variants for both samples
+freebayes -f reference/human_g1k_v37_MT.fasta bam/ind1.rmdup.sorted.bam bam/ind2.rmdup.sorted.bam > vcf/joint.raw.vcf
+```
+The one difference is the first line, ```#!/usr/bin/env bash```, which is called the shebang (the other lines beginning with ```#``` are just comments).  It allows us to run the script like a program from the command line.  For example, to run ```example.sh```, we could type (from the main directory):
+```
+./example.sh
+```
+and you should see that our pipeline is runs exactly as it did earlier, only now using a single command.  Note that the ```./``` is required for your shell to recognize your script as a program.
+
+One quick note: if we want others to be able to use our script (either to run it, or adapt it for their own purposes), we need to ensure that the script gives everyone permission to read, write, or execute it.  You can do this with the ```chmod``` command:
+```
+chmod 777 example.sh
+```
+This will allow _anyone_ to read, write, or run your script.  If you need to limit some aspects of reading/writing/executing, see [this page](http://ss64.com/bash/chmod.html) for more information on the different codes you can use.
+
+#### Snakemake
 
 
 
