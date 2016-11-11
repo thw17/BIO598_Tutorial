@@ -470,6 +470,32 @@ So, for the general purpose of sharing our analyses, a bash script works well.  
 
 One solution is [Snakemake](https://bitbucket.org/johanneskoester/snakemake/wiki/Home), a program that allows users to construct workflows in Python.  I will only provide a very, very brief introduction in this tutorial.  For more information, I highly recommend checking out the [official tutorial](http://snakemake.bitbucket.org/snakemake-tutorial.html), [reading the documentation](https://bitbucket.org/snakemake/snakemake/wiki/Documentation), and browsing the [Google group](https://groups.google.com/forum/#!forum/snakemake).
 
+Snakemake is a Python 3 package (for Python users: note that it is NOT compatible with Python 2).  If you completed Anaconda/Miniconda installation as directed under the section "Setting Up Anaconda" above, you should have installed Snakemake into your ```BIO598``` environment.  
+
+Snakemake style and syntax is based on Make, so each snake workflow is composed of a series of rules, each with a minimum setup similar to:
+```
+rule <rule_name>:
+  input:
+    <input_file_name>
+  output:
+    <output_file_name>
+  shell:
+    "command to be run"
+```
+A more contrete example, such as our very first ```bwa``` command from above, would look like:
+```
+rule bwa_mem_mapping:
+  input:
+    ref="reference/human_g1k_v37_MT.fasta",
+    fastq1="fastq/ind1_1.fastq.gz",
+    fastq2="fastq/ind1_2.fastq.gz"
+  output:
+    "bam/ind1.sam"
+  shell:
+    "bwa mem -M {input.ref} {input.fastq1} {input.fastq2} > {output}"
+```
+
+
 
 
 
