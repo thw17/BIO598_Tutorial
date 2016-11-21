@@ -66,7 +66,7 @@ In this tutorial we'll walk through the basics of reference-based genome assembl
 In the simplest cases, you need:
 * **a reference genome assembly (in fasta format)**
 * **sequencing reads (in fastq format - many processes are quicker if files are gzipped as well)**
-* **a computing environment with the storage, memory, and software required**
+* **a computing environment with adequate storage and memory, and required software installed**
 
 #### Reference genome
 This is the pre-prepared reference genome assembly that you're going to use to map the sequencing reads from your project/experiment.  In a perfect world, this assembly is of a high-quality, has a good set of annotations available (e.g., genes, functional elements, repeats, etc.), and is relatively closely related to the species that you're studying.  This probably won't be a problem if you're working with a model organism, but in other situations you'll have to consider whether a good assembly is available for a taxon evolutionarily close enough for your purposes (if not, you might need to think about assembling a reference for your project _de novo_).  For today, we're working with example sequencing reads from human samples and we have the human reference genome available, so we'll be fine.
@@ -84,7 +84,7 @@ Fasta format is a file format designed for DNA or protein sequences.  It looks s
   TTTTAACAGTCACCCCCCAACTAACACATTATTTTCCCCTCCCACTCCCATACTACTAAT
   CTCATCAATACAACCCCCGCCCATCCTACCCAGCACACACACACCGCTGCTAACCCCATA
   ```
-Here, the name of the sequence, ```MT``` is given after ```>```.  The lines that follow contain the sequence itself.  Because most fasta files wrap lines every 50-80 characters (this isn't uniform across files, unfortunately), there will often be many lines composing each sequence.  This file should only contain a single sequence, the 1000 genomes reference MT sequence, that's 16-17kb in length.  We can quickly check to make sure using (the very, very powerful) [bioawk](https://github.com/lh3/bioawk), which we installed earlier:
+Here, the name of the sequence, ```MT``` is given after ```>```.  The lines that follow contain the sequence itself.  Because most fasta files wrap lines every 50-80 characters (this isn't uniform across files, unfortunately), there will often be many lines composing each sequence.  Today's (```human_g1k_v37_MT.fasta```) file should only contain a single sequence, the 1000 genomes reference MT sequence, that's 16-17kb in length.  We can quickly check to make sure using (the very, very powerful) [bioawk](https://github.com/lh3/bioawk), which we installed earlier:
   ```
   bioawk -c fastx '{print ($name); print length($seq)}' human_g1k_v37_MT.fasta
   MT
@@ -120,13 +120,13 @@ The sequence identifier can contain a lot of information (see [Illumina's descri
 
 The sequence line here is 250 bases long and contains the nucleotide sequence corresponding to each read.
 
-The comment line usually either is a lone + or a + and then the sequence identifier repeated.  You'll generally ignore this line, but it's good to be aware of what's on it in case you're counting the number of reads belonging to a certain tile, for example.  In this case if the sequence identifier is repeated, your count will be double the actual number of reads coming from that tile.
+The comment line usually either is a lone + or a + and then the sequence identifier repeated.  You'll generally ignore this line, but it's good to be aware of what's on it in case you're counting the number of reads belonging to a certain tile, for example.  In this case if the sequence identifier is repeated and you're counting the number of times a tile number is present in a file, your count will be double the actual number of reads coming from that tile.
 
 The quality score line contains an ASCII character for every nucleotide in the sequence (i.e., it'll be 250 characters long for a 250 base read, 75 characters long for a 75 base read, etc.).  Each ASCII character can be converted into a integer PHRED quality score, ranging from 0 to 93, that indicates the probability that a particular base call is incorrect.  [See more details here](http://www.drive5.com/usearch/manual/quality_score.html).
 
 If we want to quickly take a look at a summary of the reads in our fastq, we can use ```fastqc```. To analyze all of the files in the ```fastq``` directory and output the results to the ```stats``` directory, enter the following command from our main directory:
   ```
-  fastqc -c fastq/*.fastq.gz
+  fastqc -o stats fastq/*.fastq.gz
   ```
 and it will quickly generate a series of reports for each fastq file that are summarized in the .html files (one per fastq) that you can view using your browser (e.g., Firefox, Chrome, etc.).
 
@@ -174,11 +174,11 @@ This will be quick on our small reference, but the bwa indexing in particular ca
 And that's it.  All of our reference files and indices are now contained in our reference directory.
 
 #### Fastq Quality Control
-The first thing you should do when you get fastq files is get a sense of their quality.  The quickest way to do this is to run ```fastqc``` and take a look at the reports.  We can run fastqc on every fastq file in references with the command:
+The first thing you should do when you get fastq (sequencing read) files is get a sense of their quality.  The quickest way to do this is to run ```fastqc``` and take a look at the reports.  We can run fastqc on every fastq file in ```fastq``` and output reports into ```stats``` with the command (from our main directory):
   ```
-  fastqc *.fastq.gz
+  fastqc -o stats fastq/*.fastq.gz
   ```
-This should take less than a minute to complete and output a .zip and .html file for each fastq.  You can open the .html locally on your computer in your browser.
+This should take less than a minute to complete and output a .zip and .html file for each example fastq (it'll take longer for full-sized files).  You can open the .html locally on your computer in your browser.
 
 If your sequences are of an unexpectedly low quality it might be worth contacting your sequencing center.  Otherwise, lower quality towards the ends of the reads, some PCR duplication, and sequence content that's slightly off are all pretty typical in sequencing experiments.  If you're interested in trimming low-quality ends of reads or removing sequencing adapters, take a look at programs like [Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic) or [Trim Galore!](http://www.bioinformatics.babraham.ac.uk/projects/trim_galore/).  Many read mappers like BWA handle adapters and low quality ends very well and downstream variant callers will build base quality into their genotype likelihoods, so it's often not necessary to do any preprocessing if your goal is variant calling.  For today's purposes, we'll take this approach and move onto our next step.
 
@@ -204,7 +204,7 @@ If we take a look at the top of the file using ```head -n 8 ind1.sam```, we see 
   ```
 As you can see, our first line (@SQ) contains information about the reference genome (there would be more lines if there were more sequences in our reference), our second line (@PG) contains information about our bwa commands, and the remaining lines contain information about each mapped read.  You can find more information about what information is contained in each record in the [SAM/BAM specificaions](https://samtools.github.io/hts-specs/SAMv1.pdf).
 
-While it's exciting that we've successfully mapped our first sample, there are two potential problems with our command above.  First, while SAM format is convenient in that it's human-readable, alignment files are ENORMOUS, so we'll want to compress to minimize our data footprint.  Further, we want to ensure that all read-pairing, etc. didn't get lost in the mapping process.  We can easily add these steps to our pipeline by piping our output to ```samtools``` which handles this easily.  So our complete command now looks like this:
+While it's exciting that we've successfully mapped our first sample, there are two potential problems with our command above.  First, while SAM format is convenient in that it's human-readable, alignment files are ENORMOUS, so we'll want to compress (BAM format) to minimize our data footprint.  Further, we want to ensure that all read-pairing, etc. didn't get lost in the mapping process.  We can easily add these steps to our pipeline by piping our output to ```samtools``` which handles this easily.  So our complete command now looks like this:
   ```
   bwa mem -M reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samtools fixmate -O bam - bam/ind1.bam
   ```
@@ -218,21 +218,21 @@ Read groups are very useful when you're working with multiple samples, sequencin
   ```
 In a perfect world, we'd know more about our sample and could use these tags more appropriately.  ID is the name of a read group (containing a unique combination of the following tags).  SM is the sample name.  LB is the sequencing library. PU is the flowcell barcode.  PL is the sequencing technology.  A number of other options exist (see the [@RG section of the SAM/BAM specifications](https://samtools.github.io/hts-specs/SAMv1.pdf) for more information).
 
-*Note that the fastq files actually contain reads from multiple lanes, etc., as I randomly grabbed them from high-coverage 1000 genomes bam files.  But for simplicity's sake in this tutorial, we'll ignore that.
+*Note that the fastq files we're using today actually contain reads from multiple lanes, etc., as I randomly grabbed them from high-coverage 1000 genomes bam files.  But for simplicity's sake in this tutorial, we'll ignore that.
 
 ##### Removing Duplicates
 During library preparation for sequencing, amplification steps can lead to PCR duplicates of reads.  The inclusion of duplicate reads can negatively affect our downstream analyses, so we need to remove them (this is the case with DNA sequencing - there's debate whether or not to do this in RNA-seq).  Most available tools, such as [Picard](https://broadinstitute.github.io/picard/command-line-overview.html), take a sorted bam file as input and output a sorted bam with duplicates either flagged or removed.  [Samblaster](https://github.com/GregoryFaust/samblaster), on the other hand, can take streaming output from bwa, which speeds up duplicate removal and allows us to produce one less bam file (saving us space).  We'll opt for Samblaster here, and incorporate it into our bwa command like so:
   ```
   bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate -O bam - bam/ind1.rmdup.bam
   ```
-This will flag, but not remove, duplicates from our bam.
+This will flag, but not remove, duplicates in our bam.
 
-*Note that the fastq files actually contain reads from multiple lanes, etc., as I randomly grabbed them from high-coverage 1000 genomes bam files.  But for simplicity's sake in this tutorial, we'll ignore that.
+*Note, again, that the fastq files we're using today actually contain reads from multiple lanes, etc., as I randomly grabbed them from high-coverage 1000 genomes bam files.  But for simplicity's sake in this tutorial, we'll ignore that.
 
 ##### Sorting bam files
 If we weren't piping data directly to Samblaster, and instead using a different tool for duplicate removal, we'd have to sort our bam (in genome coordinate order) first.  But because we were able to build duplicate removal and adding our read groups into our pipeline, sorting will come last.
 
-Sorting doesn't require too much explanation.  The most genomes are huge, so it's inefficient to move across unsorted bam files (we need access to all reads covering a given base for variant calling, for example).  ```samtools sort ``` is widely used, and that's what we'll employ here.  Like our previous tools, it handles streaming input, so we can simply add to our previous command to save space:
+Sorting doesn't require too much explanation.  Most genomic datasets are huge, so it's inefficient to move across unsorted bam files (we need access to all reads covering a given base for variant calling, for example).  ```samtools sort ``` is widely used, and that's what we'll employ here.  Like our previous tools, it handles streaming input, so we can simply add to our previous command to save space:
   ```
   bwa mem -M -R '@RG\tID:ind1\tSM:ind1\tLB:ind1\tPU:ind1\tPL:Illumina' reference/human_g1k_v37_MT.fasta fastq/ind1_1.fastq.gz fastq/ind1_2.fastq.gz | samblaster -M | samtools fixmate - - | samtools sort -O bam -o bam/ind1.rmdup.sorted.bam -
   ```
@@ -316,7 +316,7 @@ Now that our bam is processed and indexed, it's time to call variants!!  There a
   ```
   freebayes -f reference/human_g1k_v37_MT.fasta bam/ind1.rmdup.sorted.bam > vcf/ind1.raw.vcf
   ```
-The resulting list of variants is quite small.  Because the mitochondrial genome is haploid, we really only expect to see variant records for sites where individual 1 differs from the reference. However, because there are so many copies of mitochondria sequenced during normal genome sequencing, we might expect a bit of heteroplasmy and the possibility of heterozygous calls.
+The resulting list of variants is quite small.  Because the mitochondrial genome is haploid, we really only expect to see variant records for sites where individual 1 differs from the reference. However, because there are so many copies of mitochondria sequenced during normal genome sequencing, we might expect a bit of heteroplasmy (variation among different mitochondrial genomes within an individual) and the possibility of heterozygous calls.
 
 We can print all heterozygous calls with a site quality greater than 30 (less than a 1 in 1000 chance of being incorrectly identified as a polymorphic site) to the screen using SnpSift with the following command (from the main directory):
   ```
@@ -494,7 +494,7 @@ rule bwa_mem_mapping:
   shell:
     "bwa mem -M {input.ref} {input.fastq1} {input.fastq2} > {output}"
 ```
-
+Breaking down each part, we first have to declare our "rule" with ```rule bwa_mem_mapping:```.  Note the lack of indentation (tabs, spaces, and whitespace are very important in python) and the colon.  We then indent and declare our input with the keyword ```input:```.  Again, note the indentation (a single tab) and the colon.  Next, we indent and declare variables that are required for this rule as input.  Here, we declare ```ref``` (a reference genome), ```fastq1``` (the first of the two paired-end fastq files), and ```fastq2``` (the second of the two paired-end fastq files). Note the indentation (two tabs), the quotes around the file paths, and the commas.
 
 
 
